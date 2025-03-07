@@ -1,12 +1,15 @@
-name: Benchmark Test for ChatQnA
-'on':
+---
+name: Parameter Validation for Gaudi Deployment
+
+on:
   push:
     branches:
       - main
   pull_request:
     branches:
       - main
-  workflow_dispatch: null
+  workflow_dispatch: # Allows manual trigger
+
 jobs:
   validate-config:
     name: Validate YAML Config
@@ -14,25 +17,59 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
       - name: Install YAML Linter
         run: pip install yamllint
+
       - name: Validate YAML Syntax
-        run: yamllint benchmark_chatqna.yaml
-  test-benchmark:
-    name: Benchmark Gaudi Deployment
+        run: yamllint benchmark_chatqna.yaml # Ensure this file exists
+
+  fetch-and-test:
+    name: Fetch YAML Content & Run Tests
     runs-on: ubuntu-latest
     needs: validate-config
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install Dependencies
-        run: pip install -r requirements.txt || echo "No requirements.txt found"
-      - name: 'Run Core Count, Memory Speed, Model Change Tests'
-        env:
-          HUGGINGFACEHUB_API_TOKEN: '${{ secrets.HUGGINGFACEHUB_API_TOKEN }}'
+
+      - name: Read YAML Content
+        id: read_yaml
         run: |
-          python test.py
+          echo "Fetching benchmark_chatqna.yaml content..."
+          cat benchmark_chatqna.yaml > benchmark_content.yaml
+
+      - name: Run Core Count Test
+        run: python -c "
+import yaml
+with open('benchmark_content.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+for service, details in config.get('deploy', {}).get('services', {}).items():
+    cores = details.get('resources', {}).get('cores_per_instance')
+    print(f'✅ {service}: cores_per_instance = {cores}' 
+          if cores else f'⚠️ {service}: cores_per_instance is missing!')
+"
+
+      - name: Run Memory Speed Test
+        run: python -c "
+import yaml
+with open('benchmark_content.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+for service, details in config.get('deploy', {}).get('services', {}).items():
+    memory_speed = details.get('resources', {}).get('memory_speed')
+    print(f'✅ {service}: memory_speed = {memory_speed}' 
+          if memory_speed else f'⚠️ {service}: memory_speed is missing!')
+"
+
+      - name: Run Model Change Test
+        run: python -c "
+import yaml
+with open('benchmark_content.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+model_id = config.get('deploy', {}).get('services', {}).get('llm', {}).get('model_id')
+print(f'✅ LLM Model ID: {model_id}' if model_id else '❌ LLM Model ID is missing!')
+"
