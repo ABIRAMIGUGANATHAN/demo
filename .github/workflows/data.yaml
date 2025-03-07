@@ -1,5 +1,4 @@
----
-name: Parameter Validation for Gaudi Deployment
+name: Deploy and Benchmark on Gaudi
 
 on:
   push:
@@ -8,48 +7,48 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch: # Allows manual trigger
 
 jobs:
-  validate-config:
-    name: Validate YAML Config
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install YAML Linter
-        run: pip install yamllint
-
-      - name: Validate YAML Syntax
-        run: yamllint benchmark_chatqna.yaml # Ensure this file exists
-
-  fetch-and-test:
-    name: Fetch YAML Content & Run Tests
-    runs-on: ubuntu-latest
-    needs: validate-config
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set Up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Read YAML Content
-        id: read_yaml
+      - name: Install Dependencies (if needed)
         run: |
-          echo "Fetching benchmark_chatqna.yaml content..."
-          cat benchmark_chatqna.yaml > benchmark_content.yaml
+          pip install -r requirements.txt || echo "No dependencies to install"
 
-      - name: Run Core Count Test
+      - name: Deploy to Gaudi
         run: |
-          python -c "
-import yaml
-with open('benchmark_content.yaml', 'r') as file:
-    config = yaml.safe_load(file)
-for service, details in config.get('deploy', {}).get('services', {}).items():
-    cores = details.get('resources', {}).get('cores_per_instance')
-    print(f'✅ {service}: cores_per_instance = {cores}' if cores else f'⚠️ {service}: cores_per_instance is missing!')
-"
+          chmod +x deploy.sh
+          ./deploy.sh
+
+      - name: Wait for Services to be Ready
+        run: |
+          sleep 100  # Adjust based on service readiness
+
+  benchmark:
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Benchmark Tests
+        run: |
+          chmod +x benchmark.sh
+          ./benchmark.sh
+
+      - name: Upload Benchmark Logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-logs
+          path: logs/
