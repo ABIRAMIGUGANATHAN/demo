@@ -16,7 +16,7 @@ deploy:
       resources:
         enabled: False
         cores_per_instance: "16"
-        memory_capacity: "8000Mi"
+        memory_capacity: "4000Mi"
       replicaCount: [1, 2, 4, 8]
 
     teirerank:
@@ -32,7 +32,7 @@ deploy:
       resources:
         enabled: False
         cores_per_instance: "16"
-        memory_capacity: "8000Mi"
+        memory_capacity: "4000Mi"
       replicaCount: [1, 2, 4, 8]
 
     llm:
@@ -70,21 +70,21 @@ deploy:
       resources:
         enabled: False
         cores_per_instance: "16"
-        memory_capacity: "8000Mi"
+        memory_capacity: "4000Mi"
       replicaCount: [1, 1, 1, 1]
 
     retriever-usvc:
       resources:
         enabled: False
         cores_per_instance: "16"
-        memory_capacity: "8000Mi"
+        memory_capacity: "4000Mi"
       replicaCount: [1, 2, 4, 8]
 
     redis-vector-db:
       resources:
         enabled: False
         cores_per_instance: "16"
-        memory_capacity: "8000Mi"
+        memory_capacity: "4000Mi"
       replicaCount: [1, 1, 1, 1]
 
     chatqna-ui:
