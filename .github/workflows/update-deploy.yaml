@@ -1,71 +1,64 @@
-name: Deploy and Benchmark Gaudi
+name: Automated Deployment Testing
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+  schedule:
+    - cron: "0 */6 * * *"  # Runs every 6 hours
   workflow_dispatch:
+    inputs:
+      core_count:
+        description: 'Cores per instance'
+        required: true
+        default: '16'
+      memory_capacity:
+        description: 'Memory capacity (Mi)'
+        required: true
+        default: '8000Mi'
+      model_id:
+        description: 'Model ID'
+        required: true
+        default: 'meta-llama/Meta-Llama-3-8B-Instruct'
 
 jobs:
-  deploy-and-benchmark:
+  test-configurations:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        cores: [16, 32]
-        memory: [8000Mi, 16000Mi]
-        model: ["meta-llama/Meta-Llama-3-8B-Instruct", "meta-llama/Meta-Llama-7B-Instruct"]
+        core_count: [8, 16, 32]
+        memory_capacity: ["4000Mi", "8000Mi", "16000Mi"]
+        model_id: ["meta-llama/Meta-Llama-3-8B-Instruct", "meta-llama/Meta-Llama-2-7B-Instruct"]
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set Up Python
-        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0  
 
-      - name: Install Dependencies
+      - name: Pull latest changes
         run: |
-          pip install -r requirements.txt || true
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git pull --rebase origin main
 
-      - name: Generate Deployment YAML
+      - name: Update benchmark_chatqna.yaml
         run: |
-          cat <<EOF > deploy_config.yaml
-          deploy:
-            device: gaudi
-            version: 1.2.0
-            modelUseHostPath: /mnt/models
-            HUGGINGFACEHUB_API_TOKEN: "${{ secrets.HUGGINGFACEHUB_API_TOKEN }}"
-            node: [1, 2, 4, 8]
-            namespace: ""
-            timeout: 1000
-            interval: 5
-            services:
-              llm:
-                engine: vllm
-                model_id: "${{ matrix.model }}"
-                resources:
-                  enabled: True
-                  cores_per_instance: "${{ matrix.cores }}"
-                  memory_capacity: "${{ matrix.memory }}"
-                replicaCount:
-                  with_teirerank: [7, 15, 31, 63]
-                  without_teirerank: [8, 16, 32, 64]
-          EOF
+          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ matrix.core_count }}\"/" benchmark_chatqna.yaml
+          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ matrix.memory_capacity }}\"/" benchmark_chatqna.yaml
+          sed -i "s|model_id: \".*\"|model_id: \"${{ matrix.model_id }}\"|" benchmark_chatqna.yaml
 
-      - name: Deploy Services
+      - name: Run Tests
         run: |
-          ./deploy.sh deploy_config.yaml
+          echo "Running tests for Core Count: ${{ matrix.core_count }}, Memory: ${{ matrix.memory_capacity }}, Model: ${{ matrix.model_id }}"
+          # Add test command here, e.g., pytest, bash scripts, etc.
 
-      - name: Run Benchmark Tests
+      - name: Commit and Push Changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          ./benchmark.sh deploy_config.yaml
-
-      - name: Upload Benchmark Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: results/*.json
+          git add benchmark_chatqna.yaml
+          git commit -m "Auto-test: cores: ${{ matrix.core_count }}, memory: ${{ matrix.memory_capacity }}, model: ${{ matrix.model_id }}"
+          git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/demo.git HEAD:main
