@@ -29,9 +29,9 @@ jobs:
 
       - name: Update deploy.yaml
         run: |
-          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" deploy.yaml
-          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" deploy.yaml
-          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" deploy.yaml
+          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" benchmark_chatqna.yaml
+          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" benchmark_chatqna.yaml
+          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" benchmark_chatqna.yaml
 
       - name: Pull latest changes
         run: |
@@ -43,6 +43,6 @@ jobs:
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          git add deploy.yaml
+          git add benchmark_chatqna.yaml
           git commit -m "Updated deployment config (cores: ${{ github.event.inputs.core_count }}, memory: ${{ github.event.inputs.memory_capacity }}, model: ${{ github.event.inputs.model_id }})"
           git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/demo.git HEAD:main
