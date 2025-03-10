@@ -1,18 +1,11 @@
-name: Update Deployment Config
+name: Auto Update Deployment Config
 
 on:
   push:
     branches:
       - main
     paths:
-      - "benchmark_chatqna.yaml"   # Runs only if this file changes
-      - ".github/workflows/update-deploy.yml"  # Optional: Runs if the workflow itself changes
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "benchmark_chatqna.yaml"
-
+      - "benchmark_chatqna.yaml"  # Runs only when this file changes
   schedule:
     - cron: "0 */6 * * *"  # Runs every 6 hours
 
@@ -25,13 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT_TOKEN }}
-          fetch-depth: 0  # Ensure we fetch the full history
-
-      - name: Update deploy.yaml
-        run: |
-          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" benchmark_chatqna.yaml
-          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" benchmark_chatqna.yaml
-          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" benchmark_chatqna.yaml
+          fetch-depth: 0  # Ensure full history
 
       - name: Pull latest changes
         run: |
@@ -39,10 +26,16 @@ jobs:
           git config --global user.email "actions@github.com"
           git pull --rebase origin main
 
+      - name: Update deploy.yaml
+        run: |
+          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"16\"/" benchmark_chatqna.yaml
+          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"8000Mi\"/" benchmark_chatqna.yaml
+          sed -i "s|model_id: \".*\"|model_id: \"meta-llama/Meta-Llama-3-8B-Instruct\"|" benchmark_chatqna.yaml
+
       - name: Commit and push changes
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git add benchmark_chatqna.yaml
-          git commit -m "Updated deployment config (cores: ${{ github.event.inputs.core_count }}, memory: ${{ github.event.inputs.memory_capacity }}, model: ${{ github.event.inputs.model_id }})"
+          git commit -m "Auto-updated deployment config"
           git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/demo.git HEAD:main
