@@ -1,53 +1,71 @@
-name: Update Deployment Config
+name: Deploy and Benchmark Gaudi
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      core_count:
-        description: 'Cores per instance'
-        required: true
-        default: '16'
-      memory_capacity:
-        description: 'Memory capacity (in Mi)'
-        required: true
-        default: '8000Mi'
-      model_id:
-        description: 'Model ID'
-        required: true
-        default: 'meta-llama/Meta-Llama-3-8B-Instruct'
 
 jobs:
-  update-deployment:
+  deploy-and-benchmark:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cores: [16, 32]
+        memory: [8000Mi, 16000Mi]
+        model: ["meta-llama/Meta-Llama-3-8B-Instruct", "meta-llama/Meta-Llama-7B-Instruct"]
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
         with:
-          token: ${{ secrets.PAT_TOKEN }} # Ensure checkout uses PAT
+          python-version: '3.9'
 
-      - name: Update deploy.yaml
+      - name: Install Dependencies
         run: |
-          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" benchmark_chatqna.yaml
-          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" benchmark_chatqna.yaml
-          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" benchmark_chatqna.yaml
+          pip install -r requirements.txt || true
 
-      - name: Force Git to Use HTTPS
+      - name: Generate Deployment YAML
         run: |
-          git remote set-url origin https://github.com/ABIRAMIGUGANATHAN/demo.git
+          cat <<EOF > deploy_config.yaml
+          deploy:
+            device: gaudi
+            version: 1.2.0
+            modelUseHostPath: /mnt/models
+            HUGGINGFACEHUB_API_TOKEN: "${{ secrets.HUGGINGFACEHUB_API_TOKEN }}"
+            node: [1, 2, 4, 8]
+            namespace: ""
+            timeout: 1000
+            interval: 5
+            services:
+              llm:
+                engine: vllm
+                model_id: "${{ matrix.model }}"
+                resources:
+                  enabled: True
+                  cores_per_instance: "${{ matrix.cores }}"
+                  memory_capacity: "${{ matrix.memory }}"
+                replicaCount:
+                  with_teirerank: [7, 15, 31, 63]
+                  without_teirerank: [8, 16, 32, 64]
+          EOF
 
-      - name: Debug Permissions
+      - name: Deploy Services
         run: |
-          git remote -v
-          git status
-          git branch
+          ./deploy.sh deploy_config.yaml
 
-      - name: Commit and push changes
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+      - name: Run Benchmark Tests
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add benchmark_chatqna.yaml
-          git commit -m "Updated deployment config (cores: ${{ github.event.inputs.core_count }}, memory: ${{ github.event.inputs.memory_capacity }}, model: ${{ github.event.inputs.model_id }})"
-          git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/demo.git HEAD:main
+          ./benchmark.sh deploy_config.yaml
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: results/*.json
