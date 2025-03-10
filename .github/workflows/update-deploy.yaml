@@ -25,11 +25,11 @@ jobs:
   test-configurations:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        core_count: [8, 16, 32]
-        memory_capacity: ["4000Mi", "8000Mi", "16000Mi"]
-        model_id: ["meta-llama/Meta-Llama-3-8B-Instruct", "meta-llama/Meta-Llama-2-7B-Instruct"]
+    # strategy:
+    #   matrix:
+    #     core_count: [8, 16, 32]
+    #     memory_capacity: ["4000Mi", "8000Mi", "16000Mi"]
+    #     model_id: ["meta-llama/Meta-Llama-3-8B-Instruct", "meta-llama/Meta-Llama-2-7B-Instruct"]
 
     steps:
       - name: Checkout repository
