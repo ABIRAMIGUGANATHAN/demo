@@ -24,30 +24,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_TOKEN }} # Ensure checkout uses PAT
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0  # Ensure we fetch the full history
 
       - name: Update deploy.yaml
         run: |
-          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" benchmark_chatqna.yaml
-          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" benchmark_chatqna.yaml
-          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" benchmark_chatqna.yaml
+          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" deploy.yaml
+          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" deploy.yaml
+          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" deploy.yaml
 
-      - name: Force Git to Use HTTPS
+      - name: Pull latest changes
         run: |
-          git remote set-url origin https://github.com/ABIRAMIGUGANATHAN/demo.git
-
-      - name: Debug Permissions
-        run: |
-          git remote -v
-          git status
-          git branch
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git pull --rebase origin main
 
       - name: Commit and push changes
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add benchmark_chatqna.yaml
+          git add deploy.yaml
           git commit -m "Updated deployment config (cores: ${{ github.event.inputs.core_count }}, memory: ${{ github.event.inputs.memory_capacity }}, model: ${{ github.event.inputs.model_id }})"
           git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/demo.git HEAD:main
