@@ -21,18 +21,18 @@ deploy:
 
     teirerank:
       enabled: True
-      model_id: ""
+      model_id: "meta-llama/Meta-Llama-3-8B-Instruct"
       resources:
         enabled: False
         cards_per_instance: 1
       replicaCount: [1, 1, 1, 1]
 
     tei:
-      model_id: ""
+      model_id: "meta-llama/Meta-Llama-3-8B-Instruct"
       resources:
         enabled: False
-        cores_per_instance: "80"
-        memory_capacity: "20000Mi"
+        cores_per_instance: "16"
+        memory_capacity: "8000Mi"
       replicaCount: [1, 2, 4, 8]
 
     llm:
@@ -69,22 +69,22 @@ deploy:
     data-prep:
       resources:
         enabled: False
-        cores_per_instance: ""
-        memory_capacity: ""
+        cores_per_instance: "16"
+        memory_capacity: "8000Mi"
       replicaCount: [1, 1, 1, 1]
 
     retriever-usvc:
       resources:
         enabled: False
-        cores_per_instance: "8"
+        cores_per_instance: "16"
         memory_capacity: "8000Mi"
       replicaCount: [1, 2, 4, 8]
 
     redis-vector-db:
       resources:
         enabled: False
-        cores_per_instance: ""
-        memory_capacity: ""
+        cores_per_instance: "16"
+        memory_capacity: "8000Mi"
       replicaCount: [1, 1, 1, 1]
 
     chatqna-ui:
