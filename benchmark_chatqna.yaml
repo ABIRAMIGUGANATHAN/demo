@@ -31,7 +31,7 @@ deploy:
       model_id: "meta-llama/Meta-Llama-3-8B-Instruct"
       resources:
         enabled: False
-        cores_per_instance: "16"
+        cores_per_instance: "8"
         memory_capacity: "8000Mi"
       replicaCount: [1, 2, 4, 8]
 
@@ -76,7 +76,7 @@ deploy:
     retriever-usvc:
       resources:
         enabled: False
-        cores_per_instance: "16"
+        cores_per_instance: "8"
         memory_capacity: "8000Mi"
       replicaCount: [1, 2, 4, 8]
 
