@@ -1,14 +1,20 @@
-name: Auto Update Deployment Config
+name: Update Deployment Config
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "benchmark_chatqna.yaml"  # Runs only when this file changes
-  schedule:
-    - cron: "0 */6 * * *"  # Runs every 6 hours
-  workflow_dispatch:  # 🔥 This enables manual triggers
+  workflow_dispatch:
+    inputs:
+      core_count:
+        description: 'Cores per instance'
+        required: true
+        default: '16'
+      memory_capacity:
+        description: 'Memory capacity (in Mi)'
+        required: true
+        default: '8000Mi'
+      model_id:
+        description: 'Model ID'
+        required: true
+        default: 'meta-llama/Meta-Llama-3-8B-Instruct'
 
 jobs:
   update-deployment:
@@ -18,25 +24,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_TOKEN }}
-          fetch-depth: 0  # Ensure full history
-
-      - name: Pull latest changes
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git pull --rebase origin main
+          token: ${{ secrets.PAT_TOKEN }} # Ensure checkout uses PAT
 
       - name: Update deploy.yaml
         run: |
-          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"16\"/" benchmark_chatqna.yaml
-          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"8000Mi\"/" benchmark_chatqna.yaml
-          sed -i "s|model_id: \".*\"|model_id: \"meta-llama/Meta-Llama-3-8B-Instruct\"|" benchmark_chatqna.yaml
+          sed -i "s/cores_per_instance: \".*\"/cores_per_instance: \"${{ github.event.inputs.core_count }}\"/" benchmark_chatqna.yaml
+          sed -i "s/memory_capacity: \".*\"/memory_capacity: \"${{ github.event.inputs.memory_capacity }}\"/" benchmark_chatqna.yaml
+          sed -i "s|model_id: \".*\"|model_id: \"${{ github.event.inputs.model_id }}\"|" benchmark_chatqna.yaml
+
+      - name: Force Git to Use HTTPS
+        run: |
+          git remote set-url origin https://github.com/ABIRAMIGUGANATHAN/demo.git
+
+      - name: Debug Permissions
+        run: |
+          git remote -v
+          git status
+          git branch
 
       - name: Commit and push changes
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
           git add benchmark_chatqna.yaml
-          git commit -m "Auto-updated deployment config"
+          git commit -m "Updated deployment config (cores: ${{ github.event.inputs.core_count }}, memory: ${{ github.event.inputs.memory_capacity }}, model: ${{ github.event.inputs.model_id }})"
           git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/demo.git HEAD:main
