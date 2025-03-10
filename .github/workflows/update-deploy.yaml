@@ -1,20 +1,20 @@
 name: Update Deployment Config
 
 on:
-  workflow_dispatch:
-    inputs:
-      core_count:
-        description: 'Cores per instance'
-        required: true
-        default: '16'
-      memory_capacity:
-        description: 'Memory capacity (in Mi)'
-        required: true
-        default: '8000Mi'
-      model_id:
-        description: 'Model ID'
-        required: true
-        default: 'meta-llama/Meta-Llama-3-8B-Instruct'
+  push:
+    branches:
+      - main
+    paths:
+      - "benchmark_chatqna.yaml"   # Runs only if this file changes
+      - ".github/workflows/update-deploy.yml"  # Optional: Runs if the workflow itself changes
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "benchmark_chatqna.yaml"
+
+  schedule:
+    - cron: "0 */6 * * *"  # Runs every 6 hours
 
 jobs:
   update-deployment:
