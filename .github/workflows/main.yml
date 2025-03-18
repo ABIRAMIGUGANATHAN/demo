@@ -35,7 +35,7 @@ on:
 
 jobs:
   update-deployment:
-    runs-on: gh-runner-1
+    runs-on: label-1
 
     steps:
       - name: 📥 Checkout repository
