@@ -35,7 +35,7 @@ on:
 
 jobs:
   update-deployment:
-    runs-on: ubuntu-latest
+    runs-on: gh-runner-1
 
     steps:
       - name: 📥 Checkout repository
