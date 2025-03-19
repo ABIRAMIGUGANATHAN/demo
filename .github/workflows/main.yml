@@ -72,16 +72,17 @@ jobs:
 
       - name: 🐳 Set Up Docker Compose
         run: |
+          COMPOSE_PATH="docker_compose/intel/cpu/xeon/compose.yaml"
           echo "Deploying ChatQnA using Docker Compose..."
-          docker compose -f compose.yaml down  # Stop existing containers
-          docker compose -f compose.yaml up -d  # Start new deployment
+          docker compose -f $COMPOSE_PATH down  # Stop existing containers
+          docker compose -f $COMPOSE_PATH up -d  # Start new deployment
 
       - name: 🔍 Verify Running Containers
         run: docker ps -a
 
       - name: 🛠 Debug Logs (Optional)
         if: failure()
-        run: docker compose logs
+        run: docker compose -f docker_compose/intel/cpu/xeon/compose.yaml logs
 
       - name: ✅ Deployment Completed
         run: echo "ChatQnA deployment successful!"
