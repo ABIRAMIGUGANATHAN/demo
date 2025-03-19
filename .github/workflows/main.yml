@@ -1,4 +1,4 @@
-name: Update Deployment Config
+name: Update Deployment Config & Deploy ChatQnA
 
 on:
   workflow_dispatch:
@@ -52,16 +52,6 @@ jobs:
           echo "Updated YAML file:"
           cat benchmark_chatqna.yaml
 
-      - name: 🛠 Force Git to Use HTTPS
-        run: |
-          git remote set-url origin https://github.com/ABIRAMIGUGANATHAN/chatQ-A.git
-          git remote -v
-
-      - name: 🔍 Debug Git Status
-        run: |
-          git status
-          git branch
-
       - name: 🚀 Commit and Push Changes
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -71,3 +61,27 @@ jobs:
           git add benchmark_chatqna.yaml
           git commit -m "Auto-update: cores=${{ github.event.inputs.core_count }}, memory=${{ github.event.inputs.memory_capacity }}, model=${{ github.event.inputs.model_id }}" || echo "No changes to commit"
           git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/chatQ-A.git HEAD:main || echo "Push failed, skipping"
+
+  deploy-chatqna:
+    runs-on: self-hosted
+    needs: update-deployment  # Ensures deployment runs only after update-deployment succeeds
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set Up Docker Compose
+        run: |
+          echo "Deploying ChatQnA using Docker Compose..."
+          docker compose -f compose.yaml down  # Stop existing containers
+          docker compose -f compose.yaml up -d  # Start new deployment
+
+      - name: 🔍 Verify Running Containers
+        run: docker ps -a
+
+      - name: 🛠 Debug Logs (Optional)
+        if: failure()
+        run: docker compose logs
+
+      - name: ✅ Deployment Completed
+        run: echo "ChatQnA deployment successful!"
