@@ -35,7 +35,7 @@ on:
 
 jobs:
   update-deployment:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: 📥 Checkout repository
@@ -63,7 +63,7 @@ jobs:
           git push https://${{ secrets.PAT_TOKEN }}@github.com/ABIRAMIGUGANATHAN/chatQ-A.git HEAD:main || echo "Push failed, skipping"
 
   deploy-chatqna:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: update-deployment  # Ensures deployment runs only after update-deployment succeeds
 
     steps:
