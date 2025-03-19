@@ -91,5 +91,13 @@ jobs:
         if: failure()
         run: docker compose -f docker_compose/intel/cpu/xeon/compose.yaml logs
 
+      - name: 📝 Test ChatQnA API
+        run: |
+          sleep 10  # Wait for the service to initialize
+          RESPONSE=$(curl -s -X POST http://localhost:8888/v1/chatqna \
+            -H "Content-Type: application/json" \
+            -d '{"messages": "What is the revenue of Nike in 2023?"}')
+          echo "ChatQnA API Response: $RESPONSE"
+      
       - name: ✅ Deployment Completed
         run: echo "ChatQnA deployment successful!"
