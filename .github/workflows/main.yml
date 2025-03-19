@@ -35,7 +35,7 @@ on:
 
 jobs:
   update-deployment:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       cores: ${{ steps.set-outputs.outputs.cores }}
       memory: ${{ steps.set-outputs.outputs.memory }}
@@ -74,7 +74,7 @@ jobs:
           echo "model=${{ github.event.inputs.model_id }}" >> $GITHUB_OUTPUT
 
   deploy-chatqna:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: update-deployment  # Ensures deployment runs only after update-deployment succeeds
 
     steps:
