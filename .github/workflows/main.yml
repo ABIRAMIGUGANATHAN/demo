@@ -35,7 +35,7 @@ on:
 
 jobs:
   update-deployment:
-    runs-on: label-1
+    runs-on: self-hosted
 
     steps:
       - name: 📥 Checkout repository
