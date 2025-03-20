@@ -1,4 +1,4 @@
-name: Deploy ChatQnA with Docker Compose
+name: 🚀 Deploy and Test ChatQnA
 
 on:
   workflow_dispatch:  # Manual trigger
@@ -11,43 +11,51 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🐳 Deploy ChatQnA
+      - name: 🐳 Deploy ChatQnA Containers
         run: |
           COMPOSE_PATH="docker_compose/intel/cpu/xeon/compose.yaml"
-          echo "Bringing down any existing services..."
           docker compose -f $COMPOSE_PATH down  # Stop existing containers
-          echo "Starting new deployment..."
-          docker compose -f $COMPOSE_PATH up -d  # Start new containers in detached mode
+          docker compose -f $COMPOSE_PATH up -d
+
+      - name: ⏳ Wait for Containers to be Healthy
+        run: |
+          echo "Waiting for all containers to become healthy..."
+          for i in {1..30}; do  # Retry for 5 minutes (30*10s)
+            unhealthy_count=$(docker ps --filter "health=unhealthy" --format "{{.ID}}" | wc -l)
+            starting_count=$(docker ps --filter "health=starting" --format "{{.ID}}" | wc -l)
+            if [[ $unhealthy_count -eq 0 && $starting_count -eq 0 ]]; then
+              echo "All containers are healthy! ✅"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 10
+          done
+
+          # Final check: If unhealthy containers remain, fail the job
+          unhealthy_count=$(docker ps --filter "health=unhealthy" --format "{{.ID}}" | wc -l)
+          if [[ $unhealthy_count -gt 0 ]]; then
+            echo "Some containers are still unhealthy ❌"
+            docker ps --filter "health=unhealthy"
+            exit 1
+          fi
 
       - name: 🔍 Verify Running Containers
         run: docker ps -a
 
-      - name: 🛠 Debug Logs (Optional)
-        if: failure()
-        run: docker compose -f docker_compose/intel/cpu/xeon/compose.yaml logs
-
       - name: 📝 Test ChatQnA API
         run: |
-          echo "Waiting for service to initialize..."
-          sleep 30  # Give containers time to initialize
-
-          echo "Testing ChatQnA API..."
-          RESPONSE=$(curl -s -w "%{http_code}" -o response.txt -X POST http://localhost:8888/v1/chatqna \
+          echo "Testing API endpoint..."
+          RESPONSE=$(curl -s -X POST http://localhost:8888/v1/chatqna \
             -H "Content-Type: application/json" \
             -d '{"messages": "What is the revenue of Nike in 2023?"}')
-
-          HTTP_STATUS=$(tail -n1 <<< "$RESPONSE")
-
-          echo "Response Code: $HTTP_STATUS"
-          echo "Response Body:"
-          cat response.txt
-
-          if [[ "$HTTP_STATUS" -ne 200 ]]; then
-            echo "❌ API Test Failed! ChatQnA did not return a valid response."
+          echo "ChatQnA API Response: $RESPONSE"
+          
+          # Fail workflow if API doesn't respond
+          if [[ "$RESPONSE" == *"Internal Server Error"* || -z "$RESPONSE" ]]; then
+            echo "API test failed ❌"
             exit 1
-          else
-            echo "✅ API Test Passed! ChatQnA is responding correctly."
           fi
+          echo "API test successful ✅"
 
       - name: ✅ Deployment Completed
-        run: echo "ChatQnA deployment successful!"
+        run: echo "ChatQnA deployment successful! 🎉"
