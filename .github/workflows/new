@@ -1,0 +1,53 @@
+name: Deploy ChatQnA with Docker Compose
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  deploy-chatqna:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐳 Deploy ChatQnA
+        run: |
+          COMPOSE_PATH="docker_compose/intel/cpu/xeon/compose.yaml"
+          echo "Bringing down any existing services..."
+          docker compose -f $COMPOSE_PATH down  # Stop existing containers
+          echo "Starting new deployment..."
+          docker compose -f $COMPOSE_PATH up -d  # Start new containers in detached mode
+
+      - name: 🔍 Verify Running Containers
+        run: docker ps -a
+
+      - name: 🛠 Debug Logs (Optional)
+        if: failure()
+        run: docker compose -f docker_compose/intel/cpu/xeon/compose.yaml logs
+
+      - name: 📝 Test ChatQnA API
+        run: |
+          echo "Waiting for service to initialize..."
+          sleep 30  # Give containers time to initialize
+
+          echo "Testing ChatQnA API..."
+          RESPONSE=$(curl -s -w "%{http_code}" -o response.txt -X POST http://localhost:8888/v1/chatqna \
+            -H "Content-Type: application/json" \
+            -d '{"messages": "What is the revenue of Nike in 2023?"}')
+
+          HTTP_STATUS=$(tail -n1 <<< "$RESPONSE")
+
+          echo "Response Code: $HTTP_STATUS"
+          echo "Response Body:"
+          cat response.txt
+
+          if [[ "$HTTP_STATUS" -ne 200 ]]; then
+            echo "❌ API Test Failed! ChatQnA did not return a valid response."
+            exit 1
+          else
+            echo "✅ API Test Passed! ChatQnA is responding correctly."
+          fi
+
+      - name: ✅ Deployment Completed
+        run: echo "ChatQnA deployment successful!"
